@@ -1,20 +1,47 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Patrulla Verde - El Juego
 
-# Run and deploy your AI Studio app
+Juego de mesa educativo sobre el medio ambiente desarrollado con React, TypeScript y Vite.
 
-This contains everything you need to run your app locally.
+## 🚀 Instalación
 
-View your app in AI Studio: https://ai.studio/apps/drive/1MK9P2mvIyjs-W1x879cW2xXoUxYzDQ4P
+```bash
+npm install
+```
 
-## Run Locally
+## 💻 Desarrollo
 
-**Prerequisites:**  Node.js
+Para iniciar el servidor de desarrollo:
 
+```bash
+npm run dev
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+El proyecto se abrirá automáticamente en `http://localhost:3000`
+
+## 🏗️ Build
+
+Para crear una versión de producción:
+
+```bash
+npm run build
+```
+
+## 📁 Estructura del Proyecto
+
+```
+PatrullaVerde/
+├── src/
+│   ├── components/      # Componentes React
+│   ├── App.tsx         # Componente principal
+│   ├── constants.tsx   # Constantes del juego
+│   └── index.tsx       # Punto de entrada
+├── index.html          # HTML principal
+└── package.json        # Dependencias
+```
+
+## 🛠️ Tecnologías
+
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS (via CDN)
