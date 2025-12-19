@@ -1,5 +1,4 @@
-
-import { CardType, Card, Tile, GameCharacter } from './types';
+import { CardType, Card, Tile, GameCharacter, GameState } from './types.ts';
 
 export const COLORS = {
   [CardType.ANIMAL]: 'bg-purple-500',
@@ -81,10 +80,16 @@ export const CARDS: Record<CardType, Card[]> = {
     description: animal.desc,
     color: 'bg-purple-600',
     imageUrl: animal.img,
-    effect: (state) => {
-        const players = [...state.players];
-        players[state.currentPlayerIndex].animals.push(animal.name);
-        return { players, totalAnimalsRescued: state.totalAnimalsRescued + 1, lastLog: `¡${players[state.currentPlayerIndex].name} rescató un ${animal.name}!` };
+    effect: (state: GameState) => {
+      const players = [...state.players];
+      players[state.currentPlayerIndex].inventory.push({
+        id: `animal-${animal.name}`,
+        title: animal.name,
+        type: CardType.ANIMAL,
+        color: 'bg-purple-600',
+        imageUrl: animal.img
+      });
+      return { players, totalAnimalsRescued: state.totalAnimalsRescued + 1, lastLog: `¡${players[state.currentPlayerIndex].name} rescató un ${animal.name}!` };
     }
   })),
   [CardType.ACTION]: [
@@ -95,24 +100,24 @@ export const CARDS: Record<CardType, Card[]> = {
       description: '¡Encontraste un atajo por el bosque! Avanza 4 casillas.',
       color: 'bg-yellow-500',
       imageUrl: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=600&q=80',
-      effect: (state) => {
+      effect: (state: GameState) => {
         const players = [...state.players];
         players[state.currentPlayerIndex].position = Math.min(BOARD_LAYOUT.length - 1, players[state.currentPlayerIndex].position + 4);
         return { players, lastLog: `¡Impulso de velocidad para ${players[state.currentPlayerIndex].name}!` };
       }
     },
     {
-        id: 'act-2',
-        type: CardType.ACTION,
-        title: 'Exploración Aérea',
-        description: '¡Desde arriba todo se ve mejor! Avanza 2 casillas.',
-        color: 'bg-yellow-500',
-        imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80',
-        effect: (state) => {
-            const players = [...state.players];
-            players[state.currentPlayerIndex].position = Math.min(BOARD_LAYOUT.length - 1, players[state.currentPlayerIndex].position + 2);
-            return { players };
-        }
+      id: 'act-2',
+      type: CardType.ACTION,
+      title: 'Exploración Aérea',
+      description: '¡Desde arriba todo se ve mejor! Avanza 2 casillas.',
+      color: 'bg-yellow-500',
+      imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80',
+      effect: (state: GameState) => {
+        const players = [...state.players];
+        players[state.currentPlayerIndex].position = Math.min(BOARD_LAYOUT.length - 1, players[state.currentPlayerIndex].position + 2);
+        return { players };
+      }
     }
   ],
   [CardType.THREAT]: [
@@ -123,10 +128,10 @@ export const CARDS: Record<CardType, Card[]> = {
       description: '¡Fuego en el bosque! Todos deben retroceder 3 casillas por seguridad.',
       color: 'bg-red-600',
       imageUrl: 'https://images.unsplash.com/photo-1542332213-31f87348057f?auto=format&fit=crop&w=600&q=80',
-      effect: (state) => {
+      effect: (state: GameState) => {
         const players = state.players.map(p => ({
-            ...p,
-            position: Math.max(0, p.position - 3)
+          ...p,
+          position: Math.max(0, p.position - 3)
         }));
         return { players, lastLog: '¡Alerta de incendio! Todos retroceden.' };
       }
@@ -138,7 +143,7 @@ export const CARDS: Record<CardType, Card[]> = {
       description: '¡Demasiada basura acumulada! Pierdes tu próximo turno para limpiar.',
       color: 'bg-red-600',
       imageUrl: 'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=600&q=80',
-      effect: (state) => {
+      effect: (state: GameState) => {
         return { lastLog: `¡${state.players[state.currentPlayerIndex].name} está limpiando basura!` };
       }
     }
@@ -151,7 +156,7 @@ export const CARDS: Record<CardType, Card[]> = {
       description: 'Elige a un compañero para que avance 3 casillas contigo.',
       color: 'bg-blue-600',
       imageUrl: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=600&q=80',
-      effect: (state) => {
+      effect: (state: GameState) => {
         const players = [...state.players];
         players[state.currentPlayerIndex].position = Math.min(BOARD_LAYOUT.length - 1, players[state.currentPlayerIndex].position + 3);
         const nextIdx = (state.currentPlayerIndex + 1) % players.length;
@@ -168,24 +173,30 @@ export const CARDS: Record<CardType, Card[]> = {
       description: 'Evitar generar basura es la mejor opción. ¡Ganaste un rescate extra!',
       color: 'bg-emerald-600',
       imageUrl: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=600&q=80',
-      effect: (state) => {
+      effect: (state: GameState) => {
         const players = [...state.players];
-        players[state.currentPlayerIndex].animals.push('Bono Ecológico');
+        players[state.currentPlayerIndex].inventory.push({
+          id: 'bonus-reduce',
+          title: 'Bono Ecológico',
+          type: CardType.WASTE,
+          color: 'bg-emerald-600',
+          imageUrl: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=600&q=80'
+        });
         return { players, totalAnimalsRescued: state.totalAnimalsRescued + 1, lastLog: '¡Reducir es el primer paso!' };
       }
     },
     {
-        id: 'was-2',
-        type: CardType.WASTE,
-        title: 'RECICLAR (4ª R)',
-        description: 'Separar los residuos salva vidas. Avanza 3 casillas.',
-        color: 'bg-emerald-600',
-        imageUrl: 'https://images.unsplash.com/photo-1621451537084-482c73073a0f?auto=format&fit=crop&w=600&q=80',
-        effect: (state) => {
-          const players = [...state.players];
-          players[state.currentPlayerIndex].position = Math.min(BOARD_LAYOUT.length - 1, players[state.currentPlayerIndex].position + 3);
-          return { players, lastLog: '¡Reciclando para un mundo mejor!' };
-        }
+      id: 'was-2',
+      type: CardType.WASTE,
+      title: 'RECICLAR (4ª R)',
+      description: 'Separar los residuos salva vidas. Avanza 3 casillas.',
+      color: 'bg-emerald-600',
+      imageUrl: 'https://images.unsplash.com/photo-1621451537084-482c73073a0f?auto=format&fit=crop&w=600&q=80',
+      effect: (state: GameState) => {
+        const players = [...state.players];
+        players[state.currentPlayerIndex].position = Math.min(BOARD_LAYOUT.length - 1, players[state.currentPlayerIndex].position + 3);
+        return { players, lastLog: '¡Reciclando para un mundo mejor!' };
+      }
     }
   ]
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { CardType, type GameState, type Player, type GameCharacter } from './types.ts';
 import { BOARD_LAYOUT, CARDS, CHARACTERS } from './constants';
 import Board from './components/Board';
@@ -31,6 +31,7 @@ const App: React.FC = () => {
 
   // Estado para prevenir procesamiento concurrente de turnos
   const [isProcessingTurn, setIsProcessingTurn] = useState(false);
+  const processingRef = useRef(false);
 
   useEffect(() => {
     if (lobbyStep === 'CHARACTER_SELECT' && (tempPlayers.length !== numPlayers)) {
@@ -68,8 +69,10 @@ const App: React.FC = () => {
   }, []);
 
   const movePlayerStepByStep = (steps: number): Promise<void> => {
+    console.log(`[GAME_LOG] Iniciando movimiento: ${steps} pasos`);
     return new Promise((resolve) => {
       if (steps === 0) {
+        console.log(`[GAME_LOG] Pasos es 0, terminando movimiento inmediatamente.`);
         resolve();
         return;
       }
@@ -84,8 +87,15 @@ const App: React.FC = () => {
           // Mover primero
           setGameState((prevState: GameState) => {
             const newPlayers = [...prevState.players];
-            const player = newPlayers[prevState.currentPlayerIndex];
+            // FIX: Crear una copia superficial del jugador para no mutar el estado anterior directamente
+            // Esto evita problemas con React Strict Mode que ejecuta reducers dos veces
+            const player = { ...newPlayers[prevState.currentPlayerIndex] };
+            newPlayers[prevState.currentPlayerIndex] = player;
+
+            const currentPos = player.position;
             const nextPos = player.position + direction;
+
+            console.log(`[GAME_LOG] Moviendo jugador ${prevState.currentPlayerIndex} de ${currentPos} a ${nextPos} (Paso ${stepsMoved + 1}/${absSteps})`);
 
             if (nextPos >= 0 && nextPos < BOARD_LAYOUT.length) {
               player.position = nextPos;
@@ -93,6 +103,7 @@ const App: React.FC = () => {
 
             if (player.position >= BOARD_LAYOUT.length - 1) {
               player.isFinished = true;
+              console.log(`[GAME_LOG] Jugador llegó a la meta.`);
             }
 
             return { ...prevState, players: newPlayers };
@@ -103,6 +114,7 @@ const App: React.FC = () => {
 
           // Si ya completamos todos los pasos
           if (stepsMoved >= absSteps) {
+            console.log(`[GAME_LOG] Movimiento completado.`);
             clearInterval(moveInterval);
             setIsMoving(false);
             resolve();
@@ -117,98 +129,153 @@ const App: React.FC = () => {
   };
 
   const handleCardClose = async () => {
-    if (!gameState.activeCard) return;
+    console.log(`[GAME_LOG] Intento cerrar tarjeta. ActiveCard: ${!!gameState.activeCard}, Lock: ${processingRef.current}`);
+    if (!gameState.activeCard || processingRef.current) return;
 
-    const card = gameState.activeCard;
-    const activeIdx = gameState.currentPlayerIndex;
+    console.log(`[GAME_LOG] Cerrando tarjeta... bloqueando acciones.`);
+    processingRef.current = true;
 
-    // Obtener snapshot del estado actual antes de cerrar modal
-    const currentState = { ...gameState };
-    const initialPosition = currentState.players[activeIdx].position;
+    try {
+      const card = gameState.activeCard;
+      const activeIdx = gameState.currentPlayerIndex;
 
-    // Cerrar modal de tarjeta primero
-    setGameState((prevState: GameState) => ({ ...prevState, activeCard: null }));
-    await new Promise(resolve => setTimeout(resolve, 300));
+      // Obtener snapshot del estado actual antes de cerrar modal
+      const currentState = { ...gameState };
+      const initialPosition = currentState.players[activeIdx].position;
+      console.log(`[GAME_LOG] Posición inicial antes de efecto: ${initialPosition}`);
 
-    // Aplicar efecto de la tarjeta al estado actual (no al prevState)
-    const effectUpdate = card.effect(currentState);
-
-    // Actualizar estado con el efecto
-    setGameState((prevState: GameState) => ({
-      ...prevState,
-      ...effectUpdate
-    }));
-
-    // Esperar un momento para que el usuario vea el efecto
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // Si la carta movió al jugador, animarlo
-    const newPosition = effectUpdate.players ? effectUpdate.players[activeIdx].position : initialPosition;
-    if (newPosition !== initialPosition) {
-      const moveDiff = newPosition - initialPosition;
-
-      // Resetear posición visualmente
-      setGameState((prevState: GameState) => {
-        const resetPlayers = [...prevState.players];
-        resetPlayers[activeIdx].position = initialPosition;
-        return { ...prevState, players: resetPlayers };
-      });
-
+      // Cerrar modal de tarjeta primero
+      setGameState((prevState: GameState) => ({ ...prevState, activeCard: null }));
       await new Promise(resolve => setTimeout(resolve, 300));
-      await movePlayerStepByStep(moveDiff);
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } else {
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
 
-    // Avanzar al siguiente turno
-    setGameState((prevState: GameState) => triggerNextTurn(prevState));
-    setIsProcessingTurn(false);
+      // Aplicar efecto de la tarjeta al estado actual (no al prevState)
+      console.log(`[GAME_LOG] Aplicando efecto de tarjeta: ${card.title}`);
+      const effectUpdate = card.effect(currentState);
+
+      // Actualizar estado con el efecto
+      setGameState((prevState: GameState) => ({
+        ...prevState,
+        ...effectUpdate
+      }));
+
+      // Esperar un momento para que el usuario vea el efecto
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Si la carta movió al jugador, animarlo
+      const newPosition = effectUpdate.players ? effectUpdate.players[activeIdx].position : initialPosition;
+      console.log(`[GAME_LOG] Nueva posición post-efecto: ${newPosition}`);
+
+      if (newPosition !== initialPosition) {
+        const moveDiff = newPosition - initialPosition;
+        console.log(`[GAME_LOG] Animando movimiento extra de tarjeta: ${moveDiff} pasos`);
+
+        // Resetear posición visualmente para animar desde el origen
+        setGameState((prevState: GameState) => {
+          const resetPlayers = [...prevState.players];
+          // FIX: Copia segura para no mutar estado
+          resetPlayers[activeIdx] = { ...resetPlayers[activeIdx], position: initialPosition };
+          return { ...prevState, players: resetPlayers };
+        });
+
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await movePlayerStepByStep(moveDiff);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Avanzar al siguiente turno
+      console.log(`[GAME_LOG] Finalizando interacción de tarjeta, pasando turno.`);
+      setGameState((prevState: GameState) => triggerNextTurn(prevState));
+      setIsProcessingTurn(false);
+    } finally {
+      console.log(`[GAME_LOG] Liberando candado (processingRef = false).`);
+      processingRef.current = false;
+    }
   };
 
   const rollDice = async () => {
-    // Prevenir múltiples clics o turnos concurrentes
-    if (gameState.isRolling || gameState.activeCard || isMoving || isProcessingTurn) return;
+    console.log(`[GAME_LOG] Click en Dado. Estados => Rolling: ${gameState.isRolling}, ActiveCard: ${!!gameState.activeCard}, Moving: ${isMoving}, Processing: ${isProcessingTurn}, RefLock: ${processingRef.current}`);
 
+    // Prevenir múltiples clics o turnos concurrentes con Ref para bloqueo inmediato
+    if (gameState.isRolling || gameState.activeCard || isMoving || isProcessingTurn || processingRef.current) {
+      console.log(`[GAME_LOG] Acción bloqueada por estado o candado.`);
+      return;
+    }
+
+    console.log(`[GAME_LOG] Iniciando secuencia de dado... bloqueando.`);
+    processingRef.current = true;
     setIsProcessingTurn(true);
 
-    // Iniciar animación del dado
-    setGameState((prevState: GameState) => ({ ...prevState, isRolling: true, diceValue: null }));
+    try {
+      // Iniciar animación del dado
+      setGameState((prevState: GameState) => ({ ...prevState, isRolling: true, diceValue: null }));
 
-    // Esperar un momento antes de mostrar el resultado
-    await new Promise(resolve => setTimeout(resolve, 100));
+      // Esperar un momento antes de mostrar el resultado
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Generar número aleatorio
-    const roll = Math.floor(Math.random() * 6) + 1;
-    setGameState((prevState: GameState) => ({ ...prevState, diceValue: roll }));
+      // Generar número aleatorio
+      const roll = Math.floor(Math.random() * 6) + 1;
+      console.log(`[GAME_LOG] Resultado del dado generado: ${roll}`);
+      setGameState((prevState: GameState) => ({ ...prevState, diceValue: roll }));
 
-    // Esperar a que termine la animación del dado (2.5s)
-    await new Promise(resolve => setTimeout(resolve, 2500));
+      // Esperar a que termine la animación del dado (2.5s)
+      await new Promise(resolve => setTimeout(resolve, 2500));
 
-    // Ocultar animación del dado
-    setGameState((prevState: GameState) => ({ ...prevState, isRolling: false }));
+      // Ocultar animación del dado
+      setGameState((prevState: GameState) => ({ ...prevState, isRolling: false }));
 
-    // Esperar un poco para que el usuario vea el número
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Mover al jugador
-    await movePlayerStepByStep(roll);
-
-    // Verificar si cayó en una casilla con carta
-    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-    const landingTile = BOARD_LAYOUT[currentPlayer.position];
-
-    if (landingTile.type !== 'EMPTY' && landingTile.type !== 'START' && landingTile.type !== 'END') {
-      // Mostrar tarjeta
-      const deck = CARDS[landingTile.type as CardType];
-      const randomCard = deck[Math.floor(Math.random() * deck.length)];
-      setGameState((prevState: GameState) => ({ ...prevState, activeCard: randomCard }));
-      // El turno continuará cuando el usuario cierre la tarjeta
-    } else {
-      // No hay tarjeta, pasar al siguiente turno
+      // Esperar un poco para que el usuario vea el número
       await new Promise(resolve => setTimeout(resolve, 500));
-      setGameState((prevState: GameState) => triggerNextTurn(prevState));
-      setIsProcessingTurn(false);
+
+      // Mover al jugador
+      console.log(`[GAME_LOG] Llamando a movePlayerStepByStep con ${roll} pasos.`);
+      // FIX: Limpiar el valor del dado antes de mover para que el modal no vuelva a aparecer después
+      setGameState((prevState: GameState) => ({ ...prevState, diceValue: null }));
+      await movePlayerStepByStep(roll);
+
+      // FIX: Usar la posición calculada porque gameState.players dentro de esta función es stale (estado viejo)
+      // después del await de arriba.
+      const startPosition = gameState.players[gameState.currentPlayerIndex].position;
+      const finalPosition = Math.min(BOARD_LAYOUT.length - 1, startPosition + roll);
+      const landingTile = BOARD_LAYOUT[finalPosition];
+
+      console.log(`[GAME_LOG] Movimiento terminado. StartPos (stale): ${startPosition}, Roll: ${roll}, CalcFinalPos: ${finalPosition}, TileType: ${landingTile.type}`);
+
+      if (landingTile.type !== 'EMPTY' && landingTile.type !== 'START' && landingTile.type !== 'END') {
+        // Mostrar tarjeta
+        console.log(`[GAME_LOG] Jugador cayó en tarjeta: ${landingTile.type}. Abriendo modal.`);
+        const deck = CARDS[landingTile.type as CardType];
+        const randomCard = deck[Math.floor(Math.random() * deck.length)];
+        setGameState((prevState: GameState) => ({ ...prevState, activeCard: randomCard }));
+        // El turno continuará cuando el usuario cierre la tarjeta
+      } else {
+        // No hay tarjeta, pasar al siguiente turno
+        console.log(`[GAME_LOG] Casilla sin tarjeta. Pasando turno.`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setGameState((prevState: GameState) => triggerNextTurn(prevState));
+        setIsProcessingTurn(false);
+      }
+    } finally {
+      // Only unlock here if NO card was opened. If card opened, handleCardClose will unlock.
+      // Wait, NO. My previous logic unlocked it here regardless. That was the bug?
+      // Let's re-read the logic.
+      // If I unlock here, handleCardClose works.
+      // If I DON'T unlock here, handleCardClose works?
+      // User said: "se quedo pegado" -> implies lock was NOT released?
+      // Or implies lock WAS released but something else broke?
+
+      // Actually, if I open a card, I am STILL in the same "logical action" (the turn isn't over).
+      // BUT, handleCardClose is a SEPARATE event handler (triggered by user click).
+      // So rollDice finishes when it shows the card.
+      // SO I MUST RELEASE THE LOCK HERE usually.
+
+      // BUT if I release the lock here, user can click Dice again while card is open?
+      // No, because `gameState.activeCard` check in `rollDice` prevents that: `if (gameState.activeCard ...)`
+
+      // SO: It is SAFE and REQUIRED to release `processingRef` here.
+      console.log(`[GAME_LOG] Liberando candado de dado (processingRef = false).`);
+      processingRef.current = false;
     }
   };
 
@@ -240,7 +307,7 @@ const App: React.FC = () => {
         name: tp.name,
         color: character.color,
         position: 0,
-        animals: [],
+        inventory: [],
         isFinished: false,
         character: character
       };
@@ -286,7 +353,7 @@ const App: React.FC = () => {
           <div className="absolute top-[20%] right-[20%] text-9xl opacity-20 animate-pulse">🐆</div>
           <div className="absolute bottom-[20%] left-[15%] text-9xl opacity-20">🦅</div>
         </div>
-        <div className="bg-white/95 p-8 sm:p-12 rounded-[60px] shadow-[0_30px_60px_-10px_rgba(0,0,0,0.5)] max-w-lg w-full z-10 border-[10px] border-emerald-50 flex flex-col items-center animate-in zoom-in-95 duration-700">
+        <div className="bg-white/95 p-8 sm:p-12 rounded-[60px] shadow-[0_30px_60px_-10px_rgba(0,0,0,0.5)] max-w-lg w-full z-10 border-[10px] border-emerald-50 flex flex-col items-center">
           <div className="text-center mb-10">
             <div className="bg-[#FFD600] p-6 rounded-[40px] mb-4 shadow-[0_12px_0_#C5A500] border-4 border-white inline-block">
               <h1 className="text-4xl sm:text-5xl font-black text-emerald-900 leading-none tracking-tighter uppercase italic">PATRULLA<br />VERDE</h1>
@@ -379,11 +446,16 @@ const App: React.FC = () => {
               Mazo de {hudPlayer?.name || '---'}
             </div>
             <div className="flex flex-wrap gap-1 justify-center max-h-[180px] overflow-y-auto custom-scrollbar pt-1">
-              {hudPlayer?.animals && hudPlayer.animals.length > 0 ? (
-                hudPlayer.animals.map((a: string, i: number) => (
-                  <div key={`${hudPlayer.id}-${i}`} className="w-8 h-11 rounded-md bg-white flex flex-col items-center justify-center shadow-md border border-black/5 animate-in zoom-in-50 holo-card" title={a}>
-                    <span className="text-[14px]">🐾</span>
-                    <span className="text-[4px] font-black uppercase tracking-tighter leading-none text-center px-0.5 truncate w-full">{a}</span>
+              {hudPlayer?.inventory && hudPlayer.inventory.length > 0 ? (
+                hudPlayer.inventory.map((card, i) => (
+                  <div key={`${hudPlayer.id}-${i}`} className={`w-8 h-12 rounded-md ${card.color} flex flex-col items-center justify-between p-0.5 shadow-md border border-white/20 animate-in zoom-in-50 holo-card overflow-hidden relative`} title={card.title}>
+                    {card.imageUrl && (
+                      <div className="absolute inset-0 z-0 opacity-80">
+                        <img src={card.imageUrl} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <span className="text-[10px] z-10 drop-shadow-md">🐾</span>
+                    <span className="text-[4px] font-black uppercase tracking-tighter leading-none text-center px-0.5 truncate w-full z-10 text-white drop-shadow-md bg-black/30 rounded-full mb-0.5">{card.title}</span>
                   </div>
                 ))
               ) : (
@@ -449,13 +521,20 @@ const App: React.FC = () => {
             </div>
             <div className="flex-1 p-8 overflow-y-auto custom-scrollbar bg-emerald-50">
               <div className="mb-6">
-                <h3 className="text-emerald-900 font-black text-xs uppercase tracking-widest mb-4 border-b-2 border-emerald-100 pb-2">Colección de Tarjetas ({currentPlayer.animals.length})</h3>
-                {currentPlayer.animals.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-4">
-                    {currentPlayer.animals.map((animal: string, i: number) => (
-                      <div key={`${currentPlayer.id}-backpack-${i}`} className="bg-white p-3 rounded-2xl shadow-xl border-2 border-purple-200 flex flex-col items-center gap-2 transform transition-transform hover:scale-110 active:scale-95 cursor-pointer holo-card">
-                        <div className="w-full aspect-[3/4] bg-purple-50 rounded-lg flex items-center justify-center text-4xl shadow-inner mb-1">🐾</div>
-                        <span className="font-black text-emerald-900 text-[9px] uppercase text-center leading-tight h-6 overflow-hidden">{animal}</span>
+                <h3 className="text-emerald-900 font-black text-xs uppercase tracking-widest mb-4 border-b-2 border-emerald-100 pb-2">Colección de Tarjetas ({currentPlayer.inventory.length})</h3>
+                {currentPlayer.inventory.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {currentPlayer.inventory.map((card, i) => (
+                      <div key={`${currentPlayer.id}-backpack-${i}`} className={`bg-white p-2 rounded-2xl shadow-xl border-2 border-emerald-100 flex flex-col items-center gap-2 transform transition-transform hover:scale-105 active:scale-95 cursor-pointer holo-card overflow-hidden relative group`}>
+                        <div className={`absolute top-0 left-0 right-0 h-1.5 ${card.color}`} />
+                        <div className="w-full aspect-[4/3] rounded-lg overflow-hidden shadow-inner relative mt-1">
+                          {card.imageUrl ? (
+                            <img src={card.imageUrl} alt={card.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className={`w-full h-full ${card.color} flex items-center justify-center text-4xl opacity-50`}>🐾</div>
+                          )}
+                        </div>
+                        <span className="font-black text-emerald-900 text-[10px] uppercase text-center leading-tight h-8 flex items-center justify-center w-full px-1">{card.title}</span>
                       </div>
                     ))}
                   </div>

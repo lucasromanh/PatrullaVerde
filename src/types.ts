@@ -14,12 +14,20 @@ export interface GameCharacter {
     color: string;
 }
 
+export interface CollectedCard {
+    id: string;
+    title: string;
+    type: CardType;
+    color: string;
+    imageUrl?: string;
+}
+
 export interface Player {
     id: number;
     name: string;
     character: GameCharacter;
     position: number;
-    animals: string[];
+    inventory: CollectedCard[];
     color: string;
     isFinished: boolean;
 }
