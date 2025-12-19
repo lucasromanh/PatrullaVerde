@@ -12,12 +12,10 @@ export const COLORS = {
 };
 
 export const CHARACTERS: GameCharacter[] = [
-  { id: 'c1', name: 'Mateo', avatar: '👦', description: 'Explorador del Norte', color: '#FFD600' },
-  { id: 'c2', name: 'Sofía', avatar: '👧', description: 'Exploradora de la Selva', color: '#E91E63' },
-  { id: 'c3', name: 'Tiago', avatar: '🧒', description: 'Guardián del Monte', color: '#2196F3' },
-  { id: 'c4', name: 'Catalina', avatar: '👩‍🌾', description: 'Protectora de Humedales', color: '#4CAF50' },
-  { id: 'c5', name: 'Benja', avatar: '🧑‍🌾', description: 'Rastreador de la Pampa', color: '#FF9800' },
-  { id: 'c6', name: 'Emma', avatar: '👩‍🚀', description: 'Observadora de Aves', color: '#9C27B0' },
+  { id: 'c1', name: 'Lucas', avatar: '/LucasLego.png', description: 'Experto en reciclaje y gestión de residuos.', color: 'bg-emerald-500' },
+  { id: 'c2', name: 'Cele', avatar: '/CeleLego.png', description: 'Protectora de la flora y fauna nativa.', color: 'bg-green-600' },
+  { id: 'c3', name: 'Cata Zombie', avatar: '/CataZombieLego.png', description: 'Investigadora de energías renovables.', color: 'bg-teal-500' },
+  { id: 'c4', name: 'Cata Encanto', avatar: '/CataEncantoLego.png', description: 'Defensora del agua y los humedales.', color: 'bg-cyan-500' }
 ];
 
 export const ICONS = {
@@ -27,7 +25,8 @@ export const ICONS = {
   [CardType.SOLIDARITY]: '🤝',
   [CardType.WASTE]: '♻️',
   START: '🏁',
-  END: '🏆'
+  END: '🏆',
+  EMPTY: '🌱'
 };
 
 export const BOARD_LAYOUT: Tile[] = [
@@ -64,12 +63,12 @@ export const BOARD_LAYOUT: Tile[] = [
 ];
 
 export const ARGENTINE_ANIMALS = [
-  { name: 'Yaguareté', img: 'https://images.unsplash.com/photo-1590420485404-f86d22b8abf8?auto=format&fit=crop&w=600&q=80', desc: 'El felino más grande de América. ¡Necesita selvas sanas!' },
-  { name: 'Carpincho', img: 'https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?auto=format&fit=crop&w=600&q=80', desc: 'Amigo de los humedales. ¡Cuida su hogar de agua!' },
-  { name: 'Cóndor Andino', img: 'https://images.unsplash.com/photo-1628102422204-58679f22552a?auto=format&fit=crop&w=600&q=80', desc: 'El rey de los Andes. ¡Vuela alto y libre!' },
-  { name: 'Oso Hormiguero', img: 'https://images.unsplash.com/photo-1589182397057-b82d51970e2c?auto=format&fit=crop&w=600&q=80', desc: 'Con su lengua larga cuida el equilibrio del monte.' },
-  { name: 'Ballena Franca', img: 'https://images.unsplash.com/photo-1568430462989-44163eb1752f?auto=format&fit=crop&w=600&q=80', desc: 'Gigante del Mar Argentino. ¡Cuidemos el océano!' },
-  { name: 'Puma', img: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80', desc: 'El gran cazador de las montañas. ¡Respetemos su territorio!' }
+  { name: 'Yaguareté', img: 'https://images.unsplash.com/photo-1575550959106-5a7defe28b56?auto=format&fit=crop&q=80&w=800', desc: 'El felino más grande de América. ¡Necesita selvas sanas!' },
+  { name: 'Carpincho', img: 'https://images.unsplash.com/photo-1614741118830-1c3672727653?auto=format&fit=crop&q=80&w=800', desc: 'Amigo de los humedales. ¡Cuida su hogar de agua!' },
+  { name: 'Cóndor Andino', img: 'https://images.unsplash.com/photo-1606856110002-d09f23d5006b?auto=format&fit=crop&q=80&w=800', desc: 'El rey de los Andes. ¡Vuela alto y libre!' },
+  { name: 'Oso Hormiguero', img: 'https://images.unsplash.com/photo-1594892997136-1e621eb83c48?auto=format&fit=crop&q=80&w=800', desc: 'Con su lengua larga cuida el equilibrio del monte.' },
+  { name: 'Ballena Franca', img: 'https://images.unsplash.com/photo-1557997383-8a9d18b3356e?auto=format&fit=crop&q=80&w=800', desc: 'Gigante del Mar Argentino. ¡Cuidemos el océano!' },
+  { name: 'Puma', img: 'https://images.unsplash.com/photo-1572360677861-1c390807b1a2?auto=format&fit=crop&q=80&w=800', desc: 'El gran cazador de las montañas. ¡Respetemos su territorio!' }
 ];
 
 export const CARDS: Record<CardType, Card[]> = {
@@ -199,4 +198,21 @@ export const CARDS: Record<CardType, Card[]> = {
       }
     }
   ]
+};
+
+export const TILE_OFFSETS = [
+  { x: 1.0, y: 1.5 }, { x: 2.5, y: 1.8 }, { x: 4.0, y: 2.2 }, { x: 5.2, y: 3.2 }, { x: 4.5, y: 4.8 },
+  { x: 3.0, y: 5.5 }, { x: 1.5, y: 5.0 }, { x: 0.5, y: 6.5 }, { x: 1.2, y: 8.2 }, { x: 2.8, y: 9.0 },
+  { x: 4.5, y: 8.5 }, { x: 5.8, y: 10.0 }, { x: 5.2, y: 11.8 }, { x: 3.8, y: 12.8 }, { x: 2.2, y: 12.2 },
+  { x: 1.0, y: 13.8 }, { x: 1.8, y: 15.6 }, { x: 3.5, y: 16.2 }, { x: 5.0, y: 15.5 }, { x: 6.2, y: 17.0 },
+  { x: 5.6, y: 18.8 }, { x: 4.2, y: 19.8 }, { x: 2.6, y: 19.2 }, { x: 1.2, y: 20.6 }, { x: 1.8, y: 22.4 },
+  { x: 3.5, y: 23.0 }, { x: 5.2, y: 22.4 }, { x: 6.4, y: 24.0 }, { x: 5.8, y: 25.8 }, { x: 4.2, y: 26.8 }
+];
+
+export const getTileCoordinates = (index: number) => {
+  const pos = TILE_OFFSETS[index] || { x: index % 6, y: index };
+  return {
+    x: pos.x * 160 + 100,
+    y: pos.y * 130 + 350
+  };
 };
