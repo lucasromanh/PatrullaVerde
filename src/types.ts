@@ -15,11 +15,13 @@ export interface GameCharacter {
 }
 
 export interface Player {
-    id: string;
+    id: number;
     name: string;
     character: GameCharacter;
     position: number;
     animals: string[];
+    color: string;
+    isFinished: boolean;
 }
 
 export interface GameState {
@@ -27,6 +29,10 @@ export interface GameState {
     currentPlayerIndex: number;
     totalAnimalsRescued: number;
     lastLog: string;
+    diceValue: number | null;
+    isRolling: boolean;
+    activeCard: Card | null;
+    gameStatus: 'LOBBY' | 'PLAYING' | 'FINISHED';
 }
 
 export interface Card {
